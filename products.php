@@ -53,11 +53,23 @@ try {
             <?php endif; ?>
 
             <h3 class="product-title"><?php echo $product['name']; ?></h3>
-            <div class="product-category"><?php echo $product['category']; ?></div>
+            <!-- <?php foreach( json_decode($product['category']) as $cat ): ?>
+              <span class="product-category"><?php echo $cat; ?></span>
+            <?php endforeach; ?> -->
+            <?php
+            $categories = json_decode($product['category'], true);
+            if (is_array($categories)) {
+              foreach ($categories as $cat) {
+                echo "<span class='product-category'>" . htmlspecialchars($cat) . "</span>";
+              }
+            }else {
+              echo "<span class='product-category'>".$product['category']."</span>";
+            }
+            ?>
             <p class="product-description"><?php echo $product['description']; ?></p>
 
             <div class="card-actions">
-              <a href="edit.php?id=<?php echo $product['id']; ?>" class="btn-luxury btn-edit">
+              <a href="editPage.php?id=<?php echo $product['id']; ?>" class="btn-luxury btn-edit">
                 <i class="fas fa-pen"></i> Edit
               </a>
               <a href="delete.php?id=<?php echo $product['id']; ?>" class="btn-luxury btn-delete">

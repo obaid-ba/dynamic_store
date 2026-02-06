@@ -1,16 +1,15 @@
 <?php
 include 'connectDB.php';
-$name = $_POST['name'];
-$cat = $_POST['cat'];
-$des = $_POST['des'];
-$prix = $_POST['prix'];
+
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $name = isset($_POST['name']) ? trim($_POST['name']) : '';
-  $category = isset($_POST['cat']) ? trim($_POST['cat']) : '';
-  $description = isset($_POST['des']) ? trim($_POST['des']) : '';
-  $price = isset($_POST['prix']) ? floatval($_POST['prix']) : 0;
+  $name = $_POST['name'] ;
+  $category = $_POST['cat'];
+  $category2 = $_POST['cat2'];
+  $description =$_POST['des'];
+  $price = $_POST['prix'];
+
   if (empty($name) || empty($category) || empty($description) || $price < 0) {
     die("Error: All fields are required and price must be greater than 0");
   }
@@ -43,6 +42,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
   if ($upload_success) {
     try {
+      $categories_json = json_encode([$category, $category2]);
+      echo "<script>console.log('PHP variable:', '" . $categories_json . "');</script>";
       $stmt = $pdo->prepare("
                 INSERT INTO products (name, category, description, price, url, created_at) 
                 VALUES (?, ?, ?, ?, ?, NOW())
@@ -50,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       $stmt->execute([
         $name,
-        $category,
+        $categories_json,
         $description,
         $price,
         $image_path
@@ -58,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       $product_id = $pdo->lastInsertId();
 
-      // Success! Redirect to product detail page or show success message
+      // Success!
       echo "<!DOCTYPE html>
             <html lang='en'>
             <head>

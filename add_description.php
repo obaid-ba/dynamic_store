@@ -49,30 +49,29 @@ if (!$upload_success) {
 
 
 try {
-  $stmt = $pdo->prepare("SELECT MAX(display_order) as max_order FROM product_descriptions WHERE product_id = ?");
-  $stmt->execute([$product_id]);
-  $result = $stmt->fetch(PDO::FETCH_BOTH);
-  $next_order = ($result['max_order'] ?? 0) + 1;
+  $stmt = $pdo->prepare("SELECT description_json FROM products WHERE id = :id");
+  $stmt->execute(['id' => $product_id]);
+  $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
-  // Insert new description
-  $stmt = $pdo->prepare("
-        INSERT INTO product_descriptions (product_id, title, content, image_url, template_style, display_order) 
-        VALUES (?, ?, ?, ?, ?, ?)
-    ");
+  $descriptions_data = [];
+  if(!empty($product['description_json'])){
+    $description_data = json_decode($product['description_json'], true);
+  }
 
-  $stmt->execute([
-    $product_id,
-    $title,
-    $content,
-    $image_path,
-    $template_style,
-    $next_order
-  ]);
-
-  // Redirect back to product page
-  header("Location: main.php?id=" . $product_id);
-  exit;
-
+  if (!isset($description_data['sections'])) {
+    $description_data['sections'] = [];
+  }
+  $description_data['sections'][] = [
+    'type' => $template_style,
+    'title' => $title,
+    'content' => $content,
+    'image' => $image_path
+  ];
+  $stmt = $pdo->prepare("UPDATE products SET description_json = ? WHERE id = ?");
+  $stmt->execute([json_encode($description_data), $product_id]);
+  header('Location: main.php?id=' . $product_id."&style=".$template_style);
+  exist;
+  
 } catch (PDOException $e) {
   // Delete uploaded image if database insert fails
   if (file_exists($image_path)) {

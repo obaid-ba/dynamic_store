@@ -44,13 +44,33 @@ function selectStyle(style) {
     document.querySelectorAll('.template-option').forEach(opt => {
         opt.classList.remove('selected');
     });
+    console.log(style);
     document.querySelector(`[data-style="${style}"]`).classList.add('selected');
     document.getElementById('selectedStyle').value = style;
 }
 
-function deleteDescription(id, productId) {
+function deleteDescription(id,productId) {
     if (confirm('Are you sure you want to delete this description section?')) {
-        window.location.href = `delete_description.php?id=${id}&product_id=${productId}`;
+    const params = new URLSearchParams();
+    params.append('product_id', productId);
+    params.append('id', id);
+    fetch('delete_description.php', {
+        method: 'POST',
+        // body: `product_id=${productId}&id=${id}`
+        body: params
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error deleting section: ' + data.message);
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        console.log(err.message);
+    });
     }
 }
 
@@ -61,3 +81,4 @@ window.onclick = function(event) {
         closeModal();
     }
 }
+

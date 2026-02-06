@@ -8,10 +8,15 @@ try {
   $stmt->execute(['id' => $id]);
   $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
-  // Get custom descriptions for this product
-  $stmt = $pdo->prepare("SELECT * FROM product_descriptions WHERE product_id = :id ORDER BY display_order ASC, created_at ASC");
-  $stmt->execute(['id' => $id]);
-  $descriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  $descriptions = [];
+  if(!empty($product['description_json'])){
+    //json decode like parse in javascript
+    $decoded = json_decode($product['description_json'], true);
+    if ($decoded && isset($decoded['sections'])) {
+      $descriptions = $decoded['sections'];
+    }
+  }
+
 } catch (PDOException $e) {
   die("Database query failed: " . $e->getMessage());
 }
@@ -24,13 +29,27 @@ try {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="./style/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <title>Main Product</title>
 </head>
 
 <body>
+  <div class="goBack">
+    <a href="products.php"><i class="fa-solid fa-square-caret-left"></i></a>
+  </div>
   <div class="product-card">
     <div class="product-header">
-      <div class="product-category"><?php echo $product['category']; ?></div>
+      <?php
+      $categories = json_decode($product['category'], true);
+      if (is_array($categories)) {
+        foreach ($categories as $cat) {
+          echo "<span class='product-category' style='margin: 0 15px;'>" .$cat . "</span>";
+        }
+      }else {
+        echo "<span class='product-category'>".$product['category']."</span>";
+      }
+      ?>
+      <!-- <div class="product-category"><?php echo $product['category']; ?></div> -->
       <h1 class="product-name"><?php echo $product['name']; ?></h1>
       <div class="rating">
         ★★★★★ <span>(4.9 out of 5)</span>
@@ -64,7 +83,7 @@ try {
           </div>
 
           <div class="price-section">
-            <div class="price">$<span id="price"><?php echo $product['price']; ?></span></div>
+            <div class="price"><span id="price"><?php echo $product['price']; ?></span></div>
             <button class="buy-btn" id="buyBtn">Buy Now</button>
           </div>
         </div>
@@ -77,47 +96,52 @@ try {
     </div>
   </div>
   <div class="custom-description">
-    <?php foreach ($descriptions as $desc): ?>
-      <div class="description-section description-<?php echo $desc['template_style']; ?>">
-        <?php if ($desc['template_style'] == 'style-1'): ?>
-          <div class="desc-image-wrapper">
-            <img src="<?php echo $desc['image_url']; ?>" alt="<?php echo $desc['title']; ?>" class="desc-image">
-          </div>
-          <div class="desc-content">
-            <h3><?php echo $desc['title']; ?></h3>
-            <p><?php echo $desc['content']; ?></p>
-            <button class="delete-description"  onclick="deleteDescription(<?php echo $desc['id']; ?>, <?php echo $id; ?>)">Delete</button>
-          </div>
-        <?php elseif ($desc['template_style'] == 'style-2'): ?>
-          <img src="<?php echo $desc['image_url']; ?>" alt="<?php echo $desc['title']; ?>" class="desc-image">
-          <div class="desc-content">
-            <h3><?php echo $desc['title']; ?></h3>
-            <p><?php echo $desc['content']; ?></p>
-            <button class="delete-description"  onclick="deleteDescription(<?php echo $desc['id']; ?>, <?php echo $id; ?>)">Delete</button>
-          </div>
-        <?php elseif ($desc['template_style'] == 'style-3'): ?>
-          <div class="desc-content">
-            <h3><?php echo $desc['title']; ?></h3>
-            <p><?php echo $desc['content']; ?></p>
-            <button class="delete-description"  onclick="deleteDescription(<?php echo $desc['id']; ?>,<?php echo $id; ?>)">Delete</button>
-          </div>
-          <div class="desc-image-wrapper">
-            <img src="<?php echo $desc['image_url']; ?>" alt="<?php echo $desc['title']; ?>" class="desc-image">
-          </div>
-        <?php endif; ?>
-      </div>
-    <?php endforeach; ?>
+    <?php if (!empty($descriptions)): ?>
+      <?php foreach ($descriptions as $index => $desc): ?>
+        <div class="description-section description-<?php echo $desc['type']; ?>">
+          <?php if ($desc['type'] == 'style-1'): ?>
+            <div class="desc-image-wrapper">
+              <img src="<?php echo $desc['image']; ?>" alt="<?php echo $desc['title']; ?>" class="desc-image">
+            </div>
+            <div class="desc-content">
+              <h3><?php echo $desc['title']; ?></h3>
+              <p><?php echo $desc['content']; ?></p>
+              <button class="delete-description" onclick="deleteDescription(<?php echo $index; ?>,<?php echo $id; ?>)">Delete</button>
+            </div>
+          <?php elseif ($desc['type'] == 'style-2'): ?>
+            <img src="<?php echo $desc['image']; ?>" alt="<?php echo $desc['title']; ?>" class="desc-image">
+            <div class="desc-content">
+              <h3><?php echo $desc['title']; ?></h3>
+              <p><?php echo $desc['content']; ?></p>
+              <button class="delete-description" onclick="deleteDescription(<?php echo $index; ?>,<?php echo $id; ?>)">Delete</button>
+            </div>
+          <?php elseif ($desc['type'] == 'style-3'): ?>
+            <div class="desc-content">
+              <h3><?php echo $desc['title']; ?></h3>
+              <p><?php echo $desc['content']; ?></p>
+              <button class="delete-description" onclick="deleteDescription(<?php echo $index; ?>,<?php echo $id; ?>)">Delete</button>
+            </div>
+            <div class="desc-image-wrapper">
+              <img src="<?php echo $desc['image']; ?>" alt="<?php echo $desc['title']  ; ?>" class="desc-image">
+            </div>
+          <?php endif; ?>
+        </div>
+      <?php endforeach; ?>
+    <?php endif; ?>
   </div>
+
   <div class="add-model">
     <button>+</button>
   </div>
+
   <div id="descriptionModal" class="modal">
     <div class="modal-content">
       <span class="close-modal" onclick="closeModal()">&times;</span>
       <h2 class="modal-title">Add New Description Section</h2>
 
-      <form id="descriptionForm" action="add_description.php" method="POST" enctype="multipart/form-data" >
+      <form id="descriptionForm" action="add_description.php" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="product_id" value="<?php echo $id; ?>">
+        
         <div class="form-group">
           <label>Select Style:</label>
           <div class="template-selector">
@@ -162,11 +186,30 @@ try {
       </form>
     </div>
   </div>
-  <script src="./script.js"></script>
+  <script src="script.js"></script>
   <!-- <script>
-    function deleteDescription(id) {
+    function deleteDescription(id,productId) {
       if (confirm('Are you sure you want to delete this description section?')) {
-        window.location.href = `delete_description.php?id=${id}&product_id=<?php echo $id; ?>`;
+        const params = new URLSearchParams();
+        params.append('product_id', productId);
+        params.append('id', id);
+        fetch('delete_description.php', {
+            method: 'POST',
+            // body: `product_id=${productId}&id=${id}`
+            body: params
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+              window.location.reload();
+          } else {
+              alert('Error deleting section: ' + data.message);
+          }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            console.log(err.message);
+        });
       }
     }
   </script> -->

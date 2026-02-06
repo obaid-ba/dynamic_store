@@ -1,32 +1,37 @@
 <?php
 include 'connectDB.php';
 
-$id = $_GET['id'];
-$product_id = $_GET['product_id'];
+$id = $_POST['id'];
+$product_id = $_POST['product_id'];
 
 
 try {
-  // Get image path before deleting
-  $stmt = $pdo->prepare("SELECT image_url FROM product_descriptions WHERE id = ?");
-  $stmt->execute([$id]);
-  $result = $stmt->fetch(PDO::FETCH_ASSOC);
-  if ($result) {
-    $image_path = $result['image_url'];
-    // Delete from database
-    $stmt = $pdo->prepare("DELETE FROM product_descriptions WHERE id = ?");
-    $stmt->execute([$id]);
+  $stmt =  $pdo->prepare("SELECT description_json FROM products WHERE id = ?");
+  $stmt->execute([$product_id]);
+  $product = $stmt->fetch(PDO::FETCH_BOTH);
 
-    // Delete image file
-    if (file_exists($image_path)) {
-      unlink($image_path);
-    }
+  if (!$product || empty($product['description_json'])) {
+    die(json_encode(['success' => false, 'message' => 'Product not found']));
   }
-
-  // Redirect back
-  header("Location: main.php?id=" . $product_id);
+  $description_data = json_decode($product['description_json'], true);
+  $id = (int)$id;
+    
+  if(!isset($description_data['sections'][$id])){
+    die(json_encode(['success' => false, 'message' => 'Section not found']));
+  }
+  $image_path = $description_data['sections'][$id]['image'];
+  array_splice($description_data['sections'], $id, 1);
+  $stmt = $pdo->prepare("UPDATE products SET description_json = ? WHERE id = ?");
+  $stmt->execute([
+    json_encode($description_data),
+    $product_id
+  ]);
+  if (file_exists($image_path)) {
+    unlink($image_path);
+  }
+  echo json_encode(['success' => true]);
   exit;
-
 } catch (PDOException $e) {
-  die("Error: " . $e->getMessage());
+  echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>
